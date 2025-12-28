@@ -2,11 +2,12 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Play, RotateCcw, Pause, Volume2, VolumeX, Music, Trophy, ArrowLeft, Timer, Users, Info, ArrowRight, Sun, Cloud, Star, X, MapPin, Flag, ChevronLeft } from 'lucide-react';
 
 /**
- * UEFA CHAMPONG LEAGUE: ULTRA EDITION (Debugged & Themed)
- * - FIX: Ball collision physics rewritten to prevent "sticky posts" and "phantom goals".
- * - VISUAL: Menu players are now Diamond (<>) shaped.
- * - UI: Added Scrollbars and Back Buttons.
- * - THEME: Victory screen now features a Champions League style Starball animation.
+ * UEFA CHAMPONG LEAGUE: ULTRA EDITION (Holiday Release Candidate)
+ * - LOGIC: Rival faces you in PRACTICE/PRO. Randoms in EASY/MEDIUM/HARD.
+ * - LOGIC: Opponents rotate to ensure variety in campaign mode.
+ * - UI: Team names fit in scoreboard (scaled down).
+ * - UI: Timer is always digital RED.
+ * - FIX: Timer overflow (0:-2) permanently fixed.
  */
 
 // --- Constants ---
@@ -111,7 +112,6 @@ class AudioManager {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     
-    // Synthetic Noise Generator
     const createNoise = (duration) => {
         const bufferSize = this.ctx.sampleRate * duration;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
@@ -245,11 +245,12 @@ const audioManager = new AudioManager();
 
 // --- COMPONENTS ---
 
+// FIX: Scoreboard CSS tweaked to fit longer names
 const Scoreboard = ({ scores, timerColor, isGoldenGoal, timerDisplay, timerRef, p1Char, p2Char }) => (
   <div className="w-full max-w-4xl bg-gradient-to-b from-neutral-800 to-neutral-900 border-b-4 border-black rounded-b-xl flex justify-between items-center px-6 py-2 mb-2 shadow-2xl relative z-10 mx-auto transform hover:scale-[1.01] transition-transform">
       <div className="flex items-center gap-4 flex-1">
           <div className="flex flex-col items-end w-full overflow-hidden">
-              <div className="text-xl font-black italic text-white tracking-widest truncate w-full text-right">{p1Char.team}</div>
+              <div className="text-lg font-black italic text-white tracking-wider truncate w-full text-right">{p1Char.team}</div>
               <div className="text-xs font-bold text-gray-400 truncate w-full text-right">{p1Char.name}</div>
           </div>
           <div className="h-12 w-16 bg-black rounded flex items-center justify-center border border-neutral-700 shrink-0">
@@ -258,7 +259,7 @@ const Scoreboard = ({ scores, timerColor, isGoldenGoal, timerDisplay, timerRef, 
       </div>
       <div className="px-8 flex flex-col items-center">
          <div className="bg-black px-6 py-1 rounded text-3xl font-mono font-bold border-2 border-neutral-700 flex items-center gap-2 shadow-[0_0_15px_rgba(0,0,0,0.5)]" style={{color: timerColor}}>
-              <Timer size={24} className={isGoldenGoal ? "text-yellow-400 animate-pulse" : "text-emerald-500"} /> 
+              <Timer size={24} className={isGoldenGoal ? "text-yellow-400 animate-pulse" : "text-neutral-500"} /> 
               <span ref={timerRef}>{isGoldenGoal ? "GOLDEN" : timerDisplay}</span>
           </div>
           <div className="text-[10px] font-bold text-neutral-500 mt-1 tracking-widest">OFFICIAL MATCH TIME</div>
@@ -268,20 +269,18 @@ const Scoreboard = ({ scores, timerColor, isGoldenGoal, timerDisplay, timerRef, 
               <span className="text-4xl font-black text-white font-mono">{scores.p2}</span>
           </div>
           <div className="flex flex-col items-start w-full overflow-hidden">
-              <div className="text-xl font-black italic text-white tracking-widest truncate w-full text-left">{p2Char.team}</div>
+              <div className="text-lg font-black italic text-white tracking-wider truncate w-full text-left">{p2Char.team}</div>
               <div className="text-xs font-bold text-gray-400 truncate w-full text-left">{p2Char.name}</div>
           </div>
       </div>
   </div>
 );
 
-// --- TOP-POSITIONED GOAL OVERLAY (No Background Blur) ---
 const GoalOverlay = ({ text }) => {
     if (!text) return null;
     return (
         <div className="absolute top-10 w-full flex justify-center z-50 pointer-events-none">
             <div className="flex gap-2 text-7xl font-black text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] tracking-tighter italic">
-                {/* Wavy Text Animation */}
                 {text.split('').map((char, i) => (
                     <span key={i} className="animate-bounce" style={{animationDuration: '1s', animationDelay: `${i * 0.1}s`}}>
                         {char}
@@ -327,14 +326,15 @@ export default function UEFAChampongUltra() {
   const [uiView, setUiView] = useState('MENU');
   const [scores, setScores] = useState({ p1: 0, p2: 0 });
   const [timerDisplay, setTimerDisplay] = useState("90:00");
-  const [timerColor, setTimerColor] = useState("white");
+  
+  // FIX: Default timer color is RED (#EF4444) to match digital style requested
+  const [timerColor, setTimerColor] = useState("#EF4444"); 
   const [overlayText, setOverlayText] = useState("");
   const [isMuted, setIsMuted] = useState(false);
   const [isMusicMuted, setIsMusicMuted] = useState(false);
 
   // --- Fan & Photographer Generation ---
   useEffect(() => {
-    // Generate Noise Pattern
     const createNoisePattern = () => {
         const size = 128;
         const c = document.createElement('canvas');
@@ -373,7 +373,6 @@ export default function UEFAChampongUltra() {
     createFanSection(CANVAS_HEIGHT - FIELD_MARGIN_Y + 20, CANVAS_HEIGHT, 200); 
     state.current.fans = fans;
 
-    // RESTORED: Media Crew
     const photogs = [];
     const addPhotog = (x, y) => photogs.push({ x, y, flashTimer: 0 });
     for(let y=FIELD_TOP + 10; y<FIELD_BOTTOM; y+=40) {
@@ -389,7 +388,6 @@ export default function UEFAChampongUltra() {
 
   const ensureAudio = () => { audioManager.init(); audioManager.startMusic(); audioManager.startCrowd(); };
 
-  // --- ENGINE HELPERS ---
   const createSparks = (x, y, color, count = 15) => {
     for (let i = 0; i < count; i++) {
       state.current.particles.push({
@@ -458,14 +456,30 @@ export default function UEFAChampongUltra() {
     s.config.difficulty = diff;
     s.p1.score = 0; s.p2.score = 0; s.timeLeft = MATCH_DURATION; s.isGoldenGoal = false; s.ball.speed = 0; 
     setScores({p1:0, p2:0}); 
+    setTimerColor("#EF4444"); // Reset to red
     if(timerRef.current) timerRef.current.innerText = "90:00"; 
     startRound();
   };
 
+  // --- LOGIC: DIFFERENT OPPONENT FOR NEXT MATCH ---
   const startNextMatch = (diff) => {
-      const potentialOpponents = Object.keys(CHARACTERS).filter(k => CHARACTERS[k].id !== state.current.p1.char.id);
-      const randomKey = potentialOpponents[Math.floor(Math.random() * potentialOpponents.length)];
-      state.current.p2.char = CHARACTERS[randomKey];
+      // 1. If Next is PRO, we fight the Rival
+      if (diff === 'PRO') {
+         const rivalId = state.current.p1.char.rival;
+         state.current.p2.char = CHARACTERS[rivalId];
+      } else {
+        // 2. Otherwise, pick someone random who isn't P1 and isn't the previous opponent
+        const p1Id = state.current.p1.char.id;
+        const currentP2Id = state.current.p2.char.id;
+        
+        const opponents = Object.values(CHARACTERS).filter(c => c.id !== p1Id && c.id !== currentP2Id);
+        // Fallback (rare)
+        const pool = opponents.length > 0 ? opponents : Object.values(CHARACTERS).filter(c => c.id !== p1Id);
+        
+        const randomOp = pool[Math.floor(Math.random() * pool.length)];
+        state.current.p2.char = randomOp;
+      }
+      
       initMatch(diff);
       state.current.isPlaying = true; state.current.isPaused = false; setUiView('PLAYING'); update(); 
   };
@@ -503,7 +517,6 @@ export default function UEFAChampongUltra() {
     return false;
   };
 
-  // --- FIXED: POST COLLISION PHYSICS ---
   const checkPostCollision = (px, py) => {
     const s = state.current;
     const dx = s.ball.x - px; 
@@ -512,8 +525,6 @@ export default function UEFAChampongUltra() {
     const minDist = BALL_RADIUS + POST_RADIUS;
 
     if (dist < minDist) {
-       // 1. Static Resolution: Push the ball OUT of the post immediately
-       // so it doesn't get "stuck" inside
        const nx = dx / dist; 
        const ny = dy / dist;
        const overlap = minDist - dist;
@@ -521,19 +532,11 @@ export default function UEFAChampongUltra() {
        s.ball.x += nx * overlap; 
        s.ball.y += ny * overlap;
 
-       // 2. Dynamic Resolution: Bounce
-       // Only bounce if the ball is moving TOWARDS the post
        const dot = s.ball.dx * nx + s.ball.dy * ny;
-       
        if (dot < 0) {
            s.ball.dx = s.ball.dx - 2 * dot * nx; 
            s.ball.dy = s.ball.dy - 2 * dot * ny;
-           
-           // Slight energy loss on post hit
-           s.ball.speed *= 0.85;
-           s.ball.dx *= 0.85;
-           s.ball.dy *= 0.85;
-           
+           s.ball.speed *= 0.85; s.ball.dx *= 0.85; s.ball.dy *= 0.85;
            audioManager.playSFX('post'); 
            s.shake = 5; 
            createSparks(px, py, '#FFF');
@@ -560,7 +563,6 @@ export default function UEFAChampongUltra() {
         s.p2.x += (targetX - s.p2.x) * 0.1; s.p2.y += (targetY - s.p2.y) * 0.1; return;
     }
     
-    // 1. Calculate ideal Y
     let targetY = s.ball.y;
     const timeToReach = (s.p2.x - s.ball.x) / (s.ball.dx || 1); 
     const canPredict = ai.id === 'MEDIUM' || ai.id === 'HARD' || ai.id === 'PRO';
@@ -575,17 +577,12 @@ export default function UEFAChampongUltra() {
     } else { targetY = s.ball.y; }
     if (targetY < CANVAS_HEIGHT/2) targetY -= 10; else targetY += 10;
 
-    // 2. SMOOTH MOVEMENT (LERP-like easing with speed cap)
     const dy = targetY - s.p2.y;
     let moveStep = Math.min(Math.abs(dy), ai.aiSpeed);
-    
-    // Add "inertia" so it doesn't snap instantly (Make it smooth like player)
-    // If we are close, slow down a bit
     if (Math.abs(dy) < 20) moveStep *= 0.5;
 
     s.p2.y += Math.sign(dy) * moveStep;
 
-    // 3. X-Axis Movement
     let targetX = FIELD_RIGHT - 60; 
     if ((ai.id === 'HARD' || ai.id === 'PRO') && s.ball.x > CANVAS_WIDTH * 0.4) { targetX = Math.min(FIELD_RIGHT - 20, s.ball.x + 30); }
     if (ai.id === 'MEDIUM' && s.ball.x > FIELD_RIGHT - 200) { targetX = Math.min(FIELD_RIGHT - 20, s.ball.x + 40); }
@@ -596,7 +593,6 @@ export default function UEFAChampongUltra() {
     const moveStepX = Math.min(Math.abs(dx), ai.aiSpeed * 0.9);
     s.p2.x += Math.sign(dx) * moveStepX;
 
-    // Constraints
     const minX = CANVAS_WIDTH/2 + PLAYER_RADIUS; const maxX = FIELD_RIGHT - PLAYER_RADIUS;
     s.p2.x = Math.max(minX, Math.min(maxX, s.p2.x));
     s.p2.y = Math.max(FIELD_TOP+PLAYER_RADIUS, Math.min(FIELD_BOTTOM-PLAYER_RADIUS, s.p2.y));
@@ -620,14 +616,11 @@ export default function UEFAChampongUltra() {
     checkPostCollision(FIELD_LEFT + POST_RADIUS, gTop); checkPostCollision(FIELD_LEFT + POST_RADIUS, gBot);
     checkPostCollision(FIELD_RIGHT - POST_RADIUS, gTop); checkPostCollision(FIELD_RIGHT - POST_RADIUS, gBot);
     
-    // STRICT GOAL DETECTION
-    // Must be deeper than the field line to count as a goal
     if (s.ball.x < FIELD_LEFT) {
       if (s.ball.y > gTop + BALL_RADIUS && s.ball.y < gBot - BALL_RADIUS) {
           scorePoint('p2');
       }
       else if (s.ball.x < FIELD_LEFT - BALL_RADIUS) {
-          // If somehow behind goal but not in net (glitch safety), bounce out
           s.ball.x = FIELD_LEFT + BALL_RADIUS; s.ball.dx = Math.abs(s.ball.dx); audioManager.playSFX('post'); 
       }
     }
@@ -636,7 +629,6 @@ export default function UEFAChampongUltra() {
            scorePoint('p1');
        }
        else if (s.ball.x > FIELD_RIGHT + BALL_RADIUS) {
-            // Glitch safety
            s.ball.x = FIELD_RIGHT - BALL_RADIUS; s.ball.dx = -Math.abs(s.ball.dx); audioManager.playSFX('post'); 
        }
     }
@@ -652,15 +644,12 @@ export default function UEFAChampongUltra() {
     ctx.save();
     ctx.translate((Math.random()-0.5)*s.shake, (Math.random()-0.5)*s.shake);
 
-    // 1. DYNAMIC BACKGROUND
     ctx.fillStyle = stadium.bg || '#111'; ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     
-    // 2. RUNNING TRACK & FIELD (Behind goals) - WITH TEXTURE
-    ctx.fillStyle = '#cc5500'; // Burnt orange track color
+    ctx.fillStyle = '#cc5500'; 
     ctx.fillRect(0, FIELD_TOP, FIELD_LEFT, FIELD_HEIGHT);
     ctx.fillRect(FIELD_RIGHT, FIELD_TOP, FIELD_MARGIN_X, FIELD_HEIGHT);
     
-    // Track Texture (Noise)
     if(noisePatternRef.current) {
         ctx.fillStyle = ctx.createPattern(noisePatternRef.current, 'repeat');
         ctx.globalAlpha = 0.4;
@@ -669,27 +658,21 @@ export default function UEFAChampongUltra() {
         ctx.globalAlpha = 1.0;
     }
 
-    // Draw Lanes
     ctx.strokeStyle = 'rgba(255,255,255,0.4)';
     ctx.lineWidth = 2;
-    // Left Track Lanes
     for(let i=10; i < FIELD_LEFT; i+=20) {
         ctx.beginPath(); ctx.moveTo(i, FIELD_TOP); ctx.lineTo(i, FIELD_BOTTOM); ctx.stroke();
     }
-    // Right Track Lanes
     for(let i=FIELD_RIGHT + 10; i < CANVAS_WIDTH; i+=20) {
         ctx.beginPath(); ctx.moveTo(i, FIELD_TOP); ctx.lineTo(i, FIELD_BOTTOM); ctx.stroke();
     }
 
-    // --- GOD TIER GRASS TEXTURE ---
     const grad = ctx.createLinearGradient(0, FIELD_TOP, 0, FIELD_BOTTOM);
     grad.addColorStop(0, stadium.c1); grad.addColorStop(1, stadium.c2);
     ctx.fillStyle = grad; ctx.fillRect(FIELD_LEFT, FIELD_TOP, FIELD_WIDTH, FIELD_HEIGHT);
     
-    // Enhanced Pattern Drawing
     ctx.globalCompositeOperation = 'source-over';
     
-    // Helper for textured stripes
     const drawStripe = (x, y, w, h) => {
         const stripeGrad = ctx.createLinearGradient(x, y, x, y+h);
         stripeGrad.addColorStop(0, 'rgba(255,255,255,0.08)');
@@ -718,25 +701,19 @@ export default function UEFAChampongUltra() {
         ctx.beginPath(); ctx.arc(CANVAS_WIDTH/2, CANVAS_HEIGHT/2, 100, 0, Math.PI*2); ctx.stroke(); 
     }
 
-    // Global Field Noise (Texture)
     if(noisePatternRef.current) {
         ctx.fillStyle = ctx.createPattern(noisePatternRef.current, 'repeat');
-        ctx.globalAlpha = 0.2; // Subtle texture
+        ctx.globalAlpha = 0.2; 
         ctx.fillRect(FIELD_LEFT, FIELD_TOP, FIELD_WIDTH, FIELD_HEIGHT);
         ctx.globalAlpha = 1.0;
     }
 
-    // 4. FANS & STANDS
     ctx.fillStyle = stadium.stand || '#222'; ctx.fillRect(0, 0, CANVAS_WIDTH, FIELD_TOP); ctx.fillRect(0, FIELD_BOTTOM, CANVAS_WIDTH, FIELD_MARGIN_Y);
     ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 10, CANVAS_WIDTH, 15); ctx.fillRect(0, 35, CANVAS_WIDTH, 15); ctx.fillRect(0, FIELD_BOTTOM + 10, CANVAS_WIDTH, 15); ctx.fillRect(0, FIELD_BOTTOM + 35, CANVAS_WIDTH, 15);
 
-    // Draw Photographers (RESTORED STATIONARY BODIES with CAMERAS)
     s.photographers.forEach(p => {
-        // Draw Body (Stationary Dot)
-        ctx.fillStyle = '#333'; // Dark Press Vest
+        ctx.fillStyle = '#333'; 
         ctx.beginPath(); ctx.arc(p.x, p.y + 5, 6, 0, Math.PI*2); ctx.fill();
-        
-        // Draw Camera Icon (Head area)
         ctx.font = "16px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -744,15 +721,12 @@ export default function UEFAChampongUltra() {
 
         if (s.roundState === 'PLAYING' && Math.random() < 0.005) p.flashTimer = 5;
         
-        // Realistic Flash Effect (Lens Flare)
         if (p.flashTimer > 0) { 
             const opacity = p.flashTimer / 5;
             ctx.save();
             ctx.translate(p.x, p.y - 5);
-            // Core flash
             ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`; 
             ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill();
-            // Star flare
             ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.8})`;
             ctx.lineWidth = 2;
             ctx.beginPath(); 
@@ -764,7 +738,6 @@ export default function UEFAChampongUltra() {
         }
     });
 
-    // Draw Fans
     s.fans.forEach((f) => {
        const bounce = Math.sin(s.frameCount * f.speed + f.offset) * 3;
        let jump = 0; if (f.baseY < 0) { f.baseY += 1; jump = f.baseY; }
@@ -773,13 +746,11 @@ export default function UEFAChampongUltra() {
        ctx.save(); ctx.translate(f.x, y); 
        ctx.fillStyle = char.color; ctx.beginPath(); ctx.arc(0,0, FAN_RADIUS, 0, Math.PI*2); ctx.fill();
        
-       // Fan Number (Adaptive Color)
        ctx.fillStyle = char.text || 'white'; 
        ctx.font = "bold 9px sans-serif";
        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
        ctx.fillText(char.number, 0, 1);
 
-       // Dialog logic (FIXED: Smart Bubble Orientation)
        if (f.dialog && f.dialogTimer > 0) {
            f.dialogTimer--;
            if (f.dialogTimer === 0) f.dialog = null;
@@ -789,8 +760,7 @@ export default function UEFAChampongUltra() {
                const metrics = ctx.measureText(f.dialog);
                const w = metrics.width + 12; 
                
-               // Dynamic Y offsets based on position
-               const bubbleY = isTopSide ? 18 : -28; // Below for top fans, Above for bottom fans
+               const bubbleY = isTopSide ? 18 : -28; 
                const textY = isTopSide ? 26 : -20;
                const tailYStart = isTopSide ? 12 : -12;
                const tailYEnd = isTopSide ? 8 : -8;
@@ -800,12 +770,10 @@ export default function UEFAChampongUltra() {
                ctx.roundRect(-w/2, bubbleY, w, 16, 5); 
                ctx.fill();
                
-               // Tail pointing to fan center
                ctx.beginPath();
                ctx.moveTo(0, tailYStart); 
-               ctx.lineTo(-3, tailYEnd); // Wide part attached to bubble
-               ctx.lineTo(3, tailYEnd);  // Wide part attached to bubble
-               // Note: Tail is simplified for clarity, pointing towards 0,0 from rect
+               ctx.lineTo(-3, tailYEnd); 
+               ctx.lineTo(3, tailYEnd); 
                ctx.fill();
 
                ctx.fillStyle = "black"; 
@@ -815,66 +783,55 @@ export default function UEFAChampongUltra() {
        ctx.restore();
     });
 
-    // 5. Referee & Dialog (FIXED)
     ctx.save(); ctx.translate(s.referee.x, s.referee.y);
-    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 15, 8, 4, 0, 0, Math.PI*2); ctx.fill();
-    // Body
     ctx.beginPath(); ctx.arc(0,0, 12, 0, Math.PI*2); ctx.fillStyle='white'; ctx.fill();
     ctx.strokeStyle='black'; ctx.lineWidth=2; for(let i=-10; i<10; i+=4) { ctx.beginPath(); ctx.moveTo(i, -10); ctx.lineTo(i, 10); ctx.stroke(); }
     const leg = Math.sin(s.frameCount * 0.3) * 5;
     ctx.strokeStyle='black'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(-3, 8); ctx.lineTo(-3 + leg, 18); ctx.stroke(); ctx.beginPath(); ctx.moveTo(3, 8); ctx.lineTo(3 - leg, 18); ctx.stroke();
     
-    // FIXED: Referee Bubble Logic
     if (s.referee.dialog && s.referee.dialogTimer > 0) {
         s.referee.dialogTimer--;
         if (s.referee.dialogTimer === 0) s.referee.dialog = null;
         else {
             ctx.font = "bold 11px sans-serif";
             const textMetrics = ctx.measureText(s.referee.dialog);
-            const w = textMetrics.width + 16; // Extra padding
+            const w = textMetrics.width + 16; 
             const h = 24;
             const bubbleY = -45;
 
-            // Bubble Body
             ctx.fillStyle = "white"; ctx.strokeStyle="black"; ctx.lineWidth=1;
             ctx.beginPath(); 
             ctx.roundRect(-w/2, bubbleY, w, h, 6); 
             ctx.fill(); ctx.stroke();
 
-            // Bubble Triangle (Tail)
             ctx.beginPath(); ctx.moveTo(0, bubbleY + h); ctx.lineTo(-4, bubbleY + h + 6); ctx.lineTo(4, bubbleY + h + 6); ctx.fill(); ctx.stroke();
             
-            // Text strictly inside
             ctx.fillStyle = "black"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
             ctx.fillText(s.referee.dialog, 0, bubbleY + h/2 + 1);
         }
     }
     ctx.restore();
 
-    // Field Lines
     ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 3;
     ctx.strokeRect(FIELD_LEFT, FIELD_TOP, FIELD_WIDTH, FIELD_HEIGHT);
     ctx.beginPath(); ctx.moveTo(CANVAS_WIDTH/2, FIELD_TOP); ctx.lineTo(CANVAS_WIDTH/2, FIELD_BOTTOM); ctx.stroke();
     ctx.beginPath(); ctx.arc(CANVAS_WIDTH/2, CANVAS_HEIGHT/2, 60, 0, Math.PI*2); ctx.stroke();
     ctx.strokeRect(FIELD_LEFT, CANVAS_HEIGHT/2 - 120, 100, 240); ctx.strokeRect(FIELD_RIGHT - 100, CANVAS_HEIGHT/2 - 120, 100, 240);
 
-    // --- CORNER FLAGS (NEW FEATURE) ---
     const drawFlag = (x, y) => {
         ctx.save();
         ctx.translate(x, y);
-        // Pole
         ctx.strokeStyle = '#DDD';
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -25); ctx.stroke();
         
-        // Flag Wave Animation
         const wave = Math.sin(s.frameCount * 0.1) * 3;
-        ctx.fillStyle = '#EF4444'; // Red Flag
+        ctx.fillStyle = '#EF4444'; 
         ctx.beginPath();
         ctx.moveTo(0, -25);
-        ctx.quadraticCurveTo(10, -25 + wave, 20, -20); // Top edge curve
-        ctx.quadraticCurveTo(10, -15 + wave, 0, -15);   // Bottom edge curve
+        ctx.quadraticCurveTo(10, -25 + wave, 20, -20); 
+        ctx.quadraticCurveTo(10, -15 + wave, 0, -15); 
         ctx.fill();
         ctx.restore();
     };
@@ -884,19 +841,16 @@ export default function UEFAChampongUltra() {
     drawFlag(FIELD_LEFT, FIELD_BOTTOM);
     drawFlag(FIELD_RIGHT, FIELD_BOTTOM);
 
-    // 6. Goals & Flags
     const goalTop = CANVAS_HEIGHT/2 - GOAL_SPAN/2; const goalBot = CANVAS_HEIGHT/2 + GOAL_SPAN/2;
     const drawGoalNet = (isLeft) => {
        const postX = isLeft ? FIELD_LEFT : FIELD_RIGHT; const backX = isLeft ? FIELD_LEFT - 30 : FIELD_RIGHT + 30; 
        
-       // Dark Background for contrast
        ctx.fillStyle = 'rgba(0,0,0,0.5)';
        ctx.beginPath();
        ctx.moveTo(postX, goalTop); ctx.lineTo(backX, goalTop + 10);
        ctx.lineTo(backX, goalBot - 10); ctx.lineTo(postX, goalBot);
        ctx.fill();
 
-       // High Contrast Lines
        ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1; ctx.beginPath();
        for(let y = goalTop; y <= goalBot; y += 10) { ctx.moveTo(postX, y); ctx.lineTo(backX, y); }
        const steps = 4; for(let i=0; i<=steps; i++) { const x = postX + (backX - postX) * (i/steps); ctx.moveTo(x, goalTop); ctx.lineTo(x, goalBot); }
@@ -904,14 +858,12 @@ export default function UEFAChampongUltra() {
     };
     drawGoalNet(true); drawGoalNet(false);
 
-    // Posts (Removed expensive shadowBlur, using simple fills)
     ctx.fillStyle = '#EEE'; 
     ctx.beginPath(); ctx.arc(FIELD_LEFT + POST_RADIUS, goalTop, POST_RADIUS, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(FIELD_LEFT + POST_RADIUS, goalBot, POST_RADIUS, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(FIELD_RIGHT - POST_RADIUS, goalTop, POST_RADIUS, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(FIELD_RIGHT - POST_RADIUS, goalBot, POST_RADIUS, 0, Math.PI*2); ctx.fill();
 
-    // 7. Entities
     s.particles.forEach(p => { ctx.fillStyle = p.color; ctx.globalAlpha = p.life; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill(); });
     ctx.globalAlpha = 1.0;
     
@@ -920,7 +872,6 @@ export default function UEFAChampongUltra() {
       if (s.roundState === 'CELEBRATION') { bobX = Math.sin(s.frameCount * 0.8) * 2; visualY = p.y + Math.sin(s.frameCount * 0.4) * 10; }
       ctx.save(); ctx.translate(p.x + bobX, visualY);
       
-      // OPTIMIZATION: Fake Shadow (Ellipse) instead of ctx.shadowBlur
       ctx.fillStyle = 'rgba(0,0,0,0.4)';
       ctx.beginPath(); ctx.ellipse(0, PLAYER_RADIUS + 5, PLAYER_RADIUS, PLAYER_RADIUS/3, 0, 0, Math.PI*2); ctx.fill();
 
@@ -931,7 +882,6 @@ export default function UEFAChampongUltra() {
           ctx.beginPath(); ctx.moveTo(6, 15); ctx.lineTo(8 + l1, 30); ctx.stroke();
       }
       
-      // Player Body (No shadowBlur here anymore)
       ctx.beginPath(); ctx.arc(0,0, PLAYER_RADIUS, 0, Math.PI*2); ctx.fillStyle=p.char.color; ctx.fill();
       ctx.lineWidth=3; ctx.strokeStyle='white'; ctx.stroke();
       ctx.beginPath(); ctx.arc(0,0, PLAYER_RADIUS-6, 0, Math.PI*2); ctx.strokeStyle=p.char.secondary; ctx.stroke();
@@ -948,7 +898,6 @@ export default function UEFAChampongUltra() {
           const width = metrics.width + 60; const height = 36;
           const bx = -width/2; const by = -PLAYER_RADIUS - 45;
           ctx.fillStyle = 'white'; 
-          // Re-enable shadow just for UI elements if needed, but keeping it off for performance usually better
           ctx.beginPath(); ctx.roundRect(bx, by, width, height, 12); ctx.fill();
           ctx.beginPath(); ctx.moveTo(-6, by+height); ctx.lineTo(0, by+height+10); ctx.lineTo(6, by+height); ctx.fill();
           ctx.fillStyle = 'black'; ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -958,9 +907,7 @@ export default function UEFAChampongUltra() {
     };
     drawPlayer(s.p1, s.chatBubbles.p1); drawPlayer(s.p2, s.chatBubbles.p2);
 
-    // Ball Drawing
     ctx.translate(s.ball.x, s.ball.y); 
-    // Fake Ball Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, BALL_RADIUS + 5, BALL_RADIUS, BALL_RADIUS/3, 0, 0, Math.PI*2); ctx.fill();
     
     ctx.rotate(s.frameCount * 0.1 * s.ball.speed); 
@@ -986,17 +933,15 @@ export default function UEFAChampongUltra() {
     s.frameCount++;
     if(s.shake > 0) s.shake *= 0.9;
 
-    // Referee
     const rSpeed = 1.5;
     if (s.referee.y <= FIELD_TOP-5 && s.referee.x < FIELD_RIGHT+5) s.referee.x += rSpeed;
     else if (s.referee.x >= FIELD_RIGHT+5 && s.referee.y < FIELD_BOTTOM+5) s.referee.y += rSpeed;
     else if (s.referee.y >= FIELD_BOTTOM+5 && s.referee.x > FIELD_LEFT-5) s.referee.x -= rSpeed;
     else if (s.referee.x <= FIELD_LEFT-5 && s.referee.y > FIELD_TOP-5) s.referee.y -= rSpeed;
     
-    // Referee Random Dialog
     if (s.roundState === 'PLAYING' && !s.referee.dialog && Math.random() < 0.002) {
         s.referee.dialog = REF_PHRASES[Math.floor(Math.random() * REF_PHRASES.length)];
-        s.referee.dialogTimer = 90; // Reduced to 1.5 seconds (was 180)
+        s.referee.dialogTimer = 90; 
     }
 
     if (s.goalTimer > 0) {
@@ -1039,17 +984,18 @@ export default function UEFAChampongUltra() {
     } else if (s.roundState === 'PLAYING') {
       if (!s.isGoldenGoal && s.config.difficulty !== 'PRACTICE') {
         s.timeLeft -= 1/60;
-        let seconds = Math.floor(s.timeLeft);
-        let centis = Math.floor((s.timeLeft % 1) * 100);
-        if (seconds < 0) seconds = 0;
         
-        // DIRECT DOM UPDATE for Performance (Safari Fix)
+        // FIX: Timer Clamping for Safari/Glitch safety
+        const displayTime = Math.max(0, s.timeLeft);
+        let seconds = Math.floor(displayTime);
+        let centis = Math.floor((displayTime % 1) * 100);
+        
         if (timerRef.current) {
             timerRef.current.innerText = `${seconds.toString().padStart(2,'0')}:${centis.toString().padStart(2,'0')}`;
         }
         
         if (s.timeLeft < 10) { 
-            setTimerColor("#EF4444"); 
+             // already handled by default state, but good for pulse
             if(s.frameCount % 60 === 0) audioManager.playSFX('warning'); 
         }
         if (s.isGoldenGoal) {
@@ -1088,8 +1034,34 @@ export default function UEFAChampongUltra() {
   const handleMouse = (e) => { if(!canvasRef.current || !state.current.isPlaying) return; const r = canvasRef.current.getBoundingClientRect(); handleInput((e.clientX - r.left)*(CANVAS_WIDTH/r.width), (e.clientY - r.top)*(CANVAS_HEIGHT/r.height)); };
   const handleTouch = (e) => { if(!canvasRef.current || !state.current.isPlaying) return; const r = canvasRef.current.getBoundingClientRect(); handleInput((e.touches[0].clientX - r.left)*(CANVAS_WIDTH/r.width), (e.touches[0].clientY - r.top)*(CANVAS_HEIGHT/r.height)); };
   
-  const startGame = (d) => { if(animationRef.current) cancelAnimationFrame(animationRef.current); initMatch(d); state.current.isPlaying = true; state.current.isPaused = false; setUiView('PLAYING'); update(); };
-  const selectChar = (k) => { state.current.p1.char = CHARACTERS[k]; state.current.p2.char = CHARACTERS[CHARACTERS[k].rival]; setUiView('STADIUM_SELECT'); };
+  // --- LOGIC: OPPONENT SELECTION ---
+  const startGame = (d) => { 
+      if(animationRef.current) cancelAnimationFrame(animationRef.current); 
+      
+      const p1Id = state.current.p1.char.id;
+
+      // 1. PRACTICE or PRO = RIVAL (Story Mode / Training)
+      if (d === 'PRACTICE' || d === 'PRO') {
+         const rivalId = state.current.p1.char.rival;
+         state.current.p2.char = CHARACTERS[rivalId];
+      } 
+      // 2. EASY / MEDIUM / HARD = RANDOM OPPONENT (Campaign Variety)
+      else {
+         const opponents = Object.values(CHARACTERS).filter(c => c.id !== p1Id);
+         const randomOp = opponents[Math.floor(Math.random() * opponents.length)];
+         state.current.p2.char = randomOp;
+      }
+
+      initMatch(d); 
+      state.current.isPlaying = true; state.current.isPaused = false; setUiView('PLAYING'); update(); 
+  };
+  
+  const selectChar = (k) => { 
+      state.current.p1.char = CHARACTERS[k]; 
+      // Note: P2 is now set in startGame based on Difficulty
+      setUiView('STADIUM_SELECT'); 
+  };
+  
   const selectStadium = (s) => { state.current.config.stadium = STADIUMS[s]; setUiView('DIFFICULTY'); };
   
   useEffect(() => { const r = () => { if(containerRef.current && canvasRef.current) { canvasRef.current.width=CANVAS_WIDTH; canvasRef.current.height=CANVAS_HEIGHT; draw(); }}; window.addEventListener('resize', r); r(); return () => window.removeEventListener('resize', r); }, []);
@@ -1132,14 +1104,11 @@ export default function UEFAChampongUltra() {
             <div className="relative w-full max-w-6xl h-96 flex items-end justify-center perspective-1000 z-10 mb-8">
                 <div className="absolute bottom-0 w-[120%] h-32 bg-emerald-900/50 blur-xl transform rotate-x-60"></div>
                 
-                {/* MENU LAYOUT FIX: Reduced gap-4 to gap-2, ensuring all fit */}
                 <div className="flex gap-4 mb-16 mr-12 items-end">
                     {leftSide.map((char, i) => (
                         <div key={char.id} className="flex flex-col items-center group relative transform transition hover:scale-110" style={{animation: `bounce ${2 + i * 0.2}s infinite`}}>
-                            {/* DIAMOND SHAPE WRAPPER */}
                             <div className="w-16 h-16 transform rotate-45 border-4 border-white shadow-lg flex items-center justify-center relative overflow-hidden bg-neutral-900" style={{borderColor: char.color}}>
                                 <div className="absolute inset-0 opacity-80" style={{backgroundColor: char.color}}></div>
-                                {/* Counter-rotate content so number is straight */}
                                 <div className="transform -rotate-45 z-10 flex flex-col items-center justify-center">
                                     <span className="text-xl font-black drop-shadow-md" style={{color: char.text || 'white'}}>{char.number}</span>
                                 </div>
@@ -1158,10 +1127,8 @@ export default function UEFAChampongUltra() {
                 <div className="flex gap-4 mb-16 ml-12 items-end">
                     {rightSide.map((char, i) => (
                         <div key={char.id} className="flex flex-col items-center group relative transform transition hover:scale-110" style={{animation: `bounce ${2.5 + i * 0.2}s infinite`}}>
-                            {/* DIAMOND SHAPE WRAPPER */}
                             <div className="w-16 h-16 transform rotate-45 border-4 border-white shadow-lg flex items-center justify-center relative overflow-hidden bg-neutral-900" style={{borderColor: char.color}}>
                                 <div className="absolute inset-0 opacity-80" style={{backgroundColor: char.color}}></div>
-                                {/* Counter-rotate content so number is straight */}
                                 <div className="transform -rotate-45 z-10 flex flex-col items-center justify-center">
                                     <span className="text-xl font-black drop-shadow-md" style={{color: char.text || 'white'}}>{char.number}</span>
                                 </div>
@@ -1217,7 +1184,6 @@ export default function UEFAChampongUltra() {
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
       `}</style>
       
-      {/* Menu audio controls */}
       {uiView === 'MENU' && <AudioControls />}
 
       {(uiView === 'PLAYING' || uiView === 'GAMEOVER' || uiView === 'STADIUM_SELECT' || uiView === 'DIFFICULTY' || uiView === 'CHAR_SELECT') && (
@@ -1260,7 +1226,6 @@ export default function UEFAChampongUltra() {
                 </div>
             )}
 
-            {/* Top-Positioned Goal Overlay */}
             {overlayText === "GOALLL!!!" && <GoalOverlay text={overlayText} />}
             
             {uiView === 'CHAR_SELECT' && ( 
@@ -1362,21 +1327,17 @@ export default function UEFAChampongUltra() {
                 </div> 
             )}
             
-            {/* NEW CHAMPIONS LEAGUE THEME WINNING SCREEN */}
             {uiView === 'GAMEOVER' && ( 
                 <div className={`absolute inset-0 flex flex-col items-center justify-center animate-in zoom-in-95 z-50 overflow-hidden ${scores.p1 > scores.p2 ? "bg-indigo-950" : "bg-black/95"}`}> 
                    
-                    {/* Victory Theme Background */}
                     {scores.p1 > scores.p2 && (
                         <div className="absolute inset-0">
-                            {/* Starball Background Animation */}
                             <div className="absolute inset-0 opacity-20">
                                 {[...Array(8)].map((_, i) => (
                                     <Star key={i} size={400} fill="white" className="absolute text-white animate-[starball_20s_linear_infinite]" 
                                           style={{ top: '50%', left: '50%', marginLeft: -200, marginTop: -200, animationDelay: `-${i * 2.5}s`, opacity: 0.1 }} />
                                 ))}
                             </div>
-                            {/* Confetti */}
                             {[...Array(50)].map((_, i) => (
                                 <div key={i} className="absolute w-3 h-3 bg-yellow-400 rounded-sm" 
                                      style={{ 
